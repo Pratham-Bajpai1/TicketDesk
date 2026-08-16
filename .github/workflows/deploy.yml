@@ -34,11 +34,9 @@ jobs:
           pytest tests/
 
       - name: Secret Scan with TruffleHog
-        uses: trufflesecurity/trufflehog-main-action@main
+        uses: trufflesecurity/trufflehog@main
         with:
-          path: ./
-          base: ${{ github.event.before }}
-          head: ${{ github.sha }}
+          extra_args: --only-verified
 
   build-and-deploy:
     name: 🚀 2. Docker ECR Push & ECS Deployment (OIDC)
