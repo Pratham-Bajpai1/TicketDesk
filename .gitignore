@@ -1,0 +1,25 @@
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local databases & environment files
+ticketdesk.db
+.env
+*.log
+
+# Terraform state & provider binaries (recursively ignore all .terraform folders)
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+**/lambda_thumbnail.zip
+**/lambda_build/
+
+# IDE & OS noise
+.DS_Store
+.vscode/
+.idea/

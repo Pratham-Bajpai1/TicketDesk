@@ -1,0 +1,107 @@
+name: TicketDesk Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  id-token: write  # Required for AWS OIDC authentication
+  contents: read
+
+jobs:
+  test-and-scan:
+    name: 🧪 1. Pytest & Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run Pytest Unit Tests
+        run: |
+          pytest tests/
+
+      - name: Secret Scan with TruffleHog
+        uses: trufflesecurity/trufflehog-main-action@main
+        with:
+          path: ./
+          base: ${{ github.event.before }}
+          head: ${{ github.sha }}
+
+  build-and-deploy:
+    name: 🚀 2. Docker ECR Push & ECS Deployment (OIDC)
+    needs: test-and-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ap-southeast-1
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, Tag, and Push Image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ticketdesk-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          SHORT_SHA=${IMAGE_TAG:0:7}
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$SHORT_SHA"
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+      - name: Download Active ECS Task Definition
+        run: |
+          aws ecs describe-task-definition --task-definition tkt-pb-task --query taskDefinition > task-definition.json
+
+      - name: Render New ECR Image in Task Definition
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ticketdesk-container
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Task Definition to Amazon ECS Service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: tkt-pb-service
+          cluster: tkt-pb-cluster
+          wait-for-service-stability: true
+
+  smoke-test:
+    name: 🌐 3. CloudFront Endpoint Smoke Test
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Execute Smoke Test against CloudFront URL
+        run: |
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://d264uy2xsfsmmy.cloudfront.net/api/health)
+          echo "Health Endpoint HTTP Status: $STATUS_CODE"
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Smoke test failed! HTTP status is $STATUS_CODE"
+            exit 1
+          fi
+          echo "Smoke test passed successfully! App is healthy."

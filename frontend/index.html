@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TicketDesk - Cloud IT Ticket System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    h1, h2, h3, .font-heading { font-family: 'Outfit', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-blue-500 selection:text-white">
+
+  <!-- Header / Navigation -->
+  <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">
+        <i class="fa-solid fa-headset"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-white via-slate-200 to-blue-300 bg-clip-text text-transparent">TicketDesk</h1>
+        <p class="text-xs text-slate-400">Enterprise Cloud Support System</p>
+      </div>
+    </div>
+
+    <!-- Health Probe Indicator -->
+    <div id="healthIndicator" class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full text-xs font-medium text-slate-300">
+      <span id="healthDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      <span id="healthText">Checking DB Status...</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col gap-8">
+
+    <!-- Summary Metrics Section -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Tickets -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm flex items-center justify-between hover:border-slate-700 transition">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Tickets</p>
+          <h2 id="metricTotal" class="text-3xl font-extrabold text-white mt-1">0</h2>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300 text-xl">
+          <i class="fa-solid fa-ticket-simple"></i>
+        </div>
+      </div>
+
+      <!-- Open Tickets -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm flex items-center justify-between hover:border-blue-500/40 transition">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-blue-400">Open Tickets</p>
+          <h2 id="metricOpen" class="text-3xl font-extrabold text-blue-400 mt-1">0</h2>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
+          <i class="fa-solid fa-folder-open"></i>
+        </div>
+      </div>
+
+      <!-- In Progress Tickets -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm flex items-center justify-between hover:border-amber-500/40 transition">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-amber-400">In Progress</p>
+          <h2 id="metricInProgress" class="text-3xl font-extrabold text-amber-400 mt-1">0</h2>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-xl">
+          <i class="fa-solid fa-spinner"></i>
+        </div>
+      </div>
+
+      <!-- Closed Tickets -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 backdrop-blur-sm flex items-center justify-between hover:border-emerald-500/40 transition">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Closed / Resolved</p>
+          <h2 id="metricClosed" class="text-3xl font-extrabold text-emerald-400 mt-1">0</h2>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search, Filters & Action Toolbar -->
+    <section class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+      
+      <!-- Search Input -->
+      <div class="relative w-full md:w-80">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input type="text" id="searchInput" oninput="filterTicketsLocal()" placeholder="Search title or description..." 
+               class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-blue-500 transition">
+      </div>
+
+      <!-- Filter Controls -->
+      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <select id="statusFilter" onchange="loadTickets()" class="bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500">
+          <option value="">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+
+        <select id="priorityFilter" onchange="loadTickets()" class="bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500">
+          <option value="">All Priorities</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="URGENT">Urgent</option>
+        </select>
+
+        <select id="categoryFilter" onchange="loadTickets()" class="bg-slate-950 border border-slate-800 text-slate-300 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500">
+          <option value="">All Categories</option>
+          <option value="Hardware">Hardware</option>
+          <option value="Software">Software</option>
+          <option value="Network">Network</option>
+          <option value="Access">Access</option>
+        </select>
+
+        <button onclick="openCreateModal()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition">
+          <i class="fa-solid fa-plus"></i> New Ticket
+        </button>
+      </div>
+    </section>
+
+    <!-- Ticket Cards Grid -->
+    <section>
+      <div id="ticketsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Dynamic Ticket Cards -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Create Ticket Modal -->
+  <div id="createModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl flex flex-col gap-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-circle-plus text-blue-500 mr-2"></i>Create New Support Ticket</h2>
+        <button onclick="closeCreateModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form onsubmit="handleCreateTicket(event)" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Issue Title</label>
+          <input type="text" id="createTitle" required placeholder="e.g. Cannot access corporate VPN server" 
+                 class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Category</label>
+            <select id="createCategory" required class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500">
+              <option value="Hardware">Hardware</option>
+              <option value="Software">Software</option>
+              <option value="Network">Network</option>
+              <option value="Access">Access</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Priority</label>
+            <select id="createPriority" required class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM" selected>Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Description</label>
+          <textarea id="createDescription" rows="4" required placeholder="Detailed explanation of the issue..." 
+                    class="w-full bg-slate-950 border border-slate-800 text-slate-200 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeCreateModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold px-4 py-2.5 rounded-xl">Cancel</button>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/30">Submit Ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Ticket Detail Drawer / Modal -->
+  <div id="detailModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col gap-6">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between border-b border-slate-800 pb-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span id="detailBadgeCategory" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-800 text-slate-300"></span>
+            <span id="detailBadgePriority" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"></span>
+            <span id="detailTicketId" class="text-xs font-mono text-slate-500"></span>
+          </div>
+          <h2 id="detailTitle" class="text-xl font-bold text-white"></h2>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Status Controller & Timestamps -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-950/60 border border-slate-800/80 p-3.5 rounded-xl text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-slate-300">Status:</span>
+          <select id="detailStatusSelect" onchange="handleStatusUpdate()" class="bg-slate-900 border border-slate-700 text-slate-200 font-semibold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none">
+            <option value="OPEN">OPEN</option>
+            <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="RESOLVED">RESOLVED</option>
+            <option value="CLOSED">CLOSED</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-4 text-[11px]">
+          <span><i class="fa-regular fa-clock mr-1"></i>Created: <strong id="detailCreated" class="text-slate-300"></strong></span>
+          <span><i class="fa-solid fa-arrows-rotate mr-1"></i>Updated: <strong id="detailUpdated" class="text-slate-300"></strong></span>
+        </div>
+      </div>
+
+      <!-- Ticket Description -->
+      <div>
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Description</h3>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" id="detailDescription"></div>
+      </div>
+
+      <!-- Attachments Section (S3 Presigned PUT Upload) -->
+      <div class="border-t border-slate-800/80 pt-5">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+          <span><i class="fa-solid fa-paperclip mr-1 text-blue-400"></i>Attachments (Direct S3 PUT)</span>
+        </h3>
+
+        <!-- S3 Upload Input -->
+        <div class="flex gap-2 mb-3">
+          <input type="file" id="fileInput" class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 bg-slate-950 border border-slate-800 rounded-xl">
+          <button onclick="uploadAttachmentToS3()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 shrink-0 shadow-md shadow-blue-600/20">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Upload
+          </button>
+        </div>
+
+        <div id="attachmentsContainer" class="flex flex-col gap-2">
+          <!-- Dynamic Attachments -->
+        </div>
+      </div>
+
+      <!-- Comments Timeline Section -->
+      <div class="border-t border-slate-800/80 pt-5 flex flex-col gap-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400"><i class="fa-regular fa-comments mr-1 text-blue-400"></i>Comment Thread</h3>
+
+        <!-- Comment Form -->
+        <form onsubmit="handleAddComment(event)" class="bg-slate-950 border border-slate-800 p-3.5 rounded-xl flex flex-col gap-3">
+          <input type="text" id="commentAuthor" required placeholder="Author / Engineer Name" class="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none">
+          <textarea id="commentText" rows="2" required placeholder="Post an update or comment..." class="bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 focus:outline-none"></textarea>
+          <div class="flex justify-end">
+            <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5">
+              <i class="fa-solid fa-paper-plane"></i> Post Comment
+            </button>
+          </div>
+        </form>
+
+        <!-- Comments List -->
+        <div id="commentsTimeline" class="flex flex-col gap-3 max-h-60 overflow-y-auto pr-1">
+          <!-- Dynamic Comments -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl hidden transition-all"></div>
+
+  <script>
+    // Decoupled relative API base endpoint for AWS CloudFront / ALB target group compatibility
+    const API_BASE = "/api";
+    let allTickets = [];
+    let activeTicketId = null;
+
+    // Toast Notification Helper
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.className = `fixed bottom-5 right-5 z-50 text-xs font-semibold px-4 py-3 rounded-xl shadow-xl transition-all ${isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
+
+    // Date Formatter
+    function formatDate(isoStr) {
+      if (!isoStr) return 'N/A';
+      return new Date(isoStr).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // Health Probe Checklist Compliance (GET /api/health)
+    async function checkHealth() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        const data = await res.json();
+        const dot = document.getElementById('healthDot');
+        const text = document.getElementById('healthText');
+
+        if (res.ok && data.database === 'connected') {
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+          text.innerText = 'DB Connected';
+        } else {
+          dot.className = 'w-2 h-2 rounded-full bg-red-500';
+          text.innerText = 'DB Disconnected';
+        }
+      } catch (err) {
+        document.getElementById('healthDot').className = 'w-2 h-2 rounded-full bg-amber-500';
+        document.getElementById('healthText').innerText = 'API Connecting...';
+      }
+    }
+
+    // Load Dashboard Stats
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/dashboard/stats`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        document.getElementById('metricTotal').innerText = data.total_tickets || 0;
+        document.getElementById('metricOpen').innerText = data.by_status.OPEN || 0;
+        document.getElementById('metricInProgress').innerText = data.by_status.IN_PROGRESS || 0;
+        
+        const closedCount = (data.by_status.RESOLVED || 0) + (data.by_status.CLOSED || 0);
+        document.getElementById('metricClosed').innerText = closedCount;
+      } catch (err) {
+        console.error("Error loading metrics:", err);
+      }
+    }
+
+    // Load Tickets with Server-Side Query Parameters
+    async function loadTickets() {
+      const status = document.getElementById('statusFilter').value;
+      const priority = document.getElementById('priorityFilter').value;
+      const category = document.getElementById('categoryFilter').value;
+
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (priority) params.append('priority', priority);
+      if (category) params.append('category', category);
+
+      try {
+        const res = await fetch(`${API_BASE}/tickets?${params.toString()}`);
+        if (!res.ok) throw new Error('Failed to load tickets');
+        allTickets = await res.json();
+        filterTicketsLocal();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Real-Time Local Keyword Search
+    function filterTicketsLocal() {
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filtered = allTickets.filter(t => 
+        !search || t.title.toLowerCase().includes(search) || t.description.toLowerCase().includes(search)
+      );
+      renderTickets(filtered);
+    }
+
+    // Render Ticket Cards Grid
+    function renderTickets(tickets) {
+      const container = document.getElementById('ticketsGrid');
+      if (tickets.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-12 bg-slate-900/40 border border-slate-800 rounded-2xl">
+            <i class="fa-solid fa-inbox text-4xl text-slate-600 mb-3 block"></i>
+            <p class="text-slate-400 text-sm font-medium">No tickets found matching your query.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = tickets.map(t => {
+        // Status Badge Style Mapping
+        let statusBadgeClass = 'bg-blue-500/15 text-blue-400 border-blue-500/30'; // Open
+        if (t.status === 'IN_PROGRESS') statusBadgeClass = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+        if (t.status === 'RESOLVED') statusBadgeClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+        if (t.status === 'CLOSED') statusBadgeClass = 'bg-slate-500/15 text-slate-400 border-slate-500/30';
+
+        // Priority Text Color Mapping
+        let priorityColor = 'text-emerald-400';
+        if (t.priority === 'MEDIUM') priorityColor = 'text-blue-400';
+        if (t.priority === 'HIGH') priorityColor = 'text-orange-400';
+        if (t.priority === 'URGENT') priorityColor = 'text-red-400 font-bold';
+
+        return `
+          <div onclick="openDetailModal('${t.id}')" class="bg-slate-900/70 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-5 flex flex-col justify-between gap-4 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/5">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <h3 class="font-bold text-slate-100 text-base leading-snug">${escapeHtml(t.title)}</h3>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusBadgeClass} shrink-0">${t.status.replace('_', ' ')}</span>
+              </div>
+              <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${escapeHtml(t.description)}</p>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80 pt-3">
+              <span class="bg-slate-950 px-2 py-1 rounded-md text-[11px] font-medium"><i class="fa-solid fa-tag text-blue-400 mr-1"></i>${t.category}</span>
+              <span class="${priorityColor} text-[11px] font-semibold"><i class="fa-solid fa-signal mr-1"></i>${t.priority}</span>
+              <span class="text-[11px]"><i class="fa-regular fa-calendar mr-1"></i>${new Date(t.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Modal Helpers
+    function openCreateModal() { document.getElementById('createModal').classList.replace('hidden', 'flex'); }
+    function closeCreateModal() { document.getElementById('createModal').classList.replace('flex', 'hidden'); }
+
+    // Submit New Ticket
+    async function handleCreateTicket(e) {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('createTitle').value,
+        category: document.getElementById('createCategory').value,
+        priority: document.getElementById('createPriority').value,
+        description: document.getElementById('createDescription').value
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/tickets`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Failed to create ticket');
+        closeCreateModal();
+        showToast('Support ticket created successfully!');
+        loadTickets();
+        loadStats();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Detail View Drawer
+    async function openDetailModal(id) {
+      activeTicketId = id;
+      try {
+        const res = await fetch(`${API_BASE}/tickets/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch ticket details');
+        const t = await res.json();
+
+        document.getElementById('detailTitle').innerText = t.title;
+        document.getElementById('detailTicketId').innerText = `#${t.id.substring(0, 8)}`;
+        document.getElementById('detailBadgeCategory').innerText = t.category;
+        document.getElementById('detailBadgePriority').innerText = t.priority;
+        document.getElementById('detailStatusSelect').value = t.status;
+        document.getElementById('detailCreated').innerText = formatDate(t.created_at);
+        document.getElementById('detailUpdated').innerText = formatDate(t.updated_at);
+        document.getElementById('detailDescription').innerText = t.description;
+
+        renderComments(t.comments || []);
+        renderAttachments(t.attachments || []);
+
+        document.getElementById('detailModal').classList.replace('hidden', 'flex');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').classList.replace('flex', 'hidden');
+      activeTicketId = null;
+    }
+
+    // Update Status
+    async function handleStatusUpdate() {
+      if (!activeTicketId) return;
+      const newStatus = document.getElementById('detailStatusSelect').value;
+      try {
+        const res = await fetch(`${API_BASE}/tickets/${activeTicketId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (!res.ok) throw new Error('Status update failed');
+        showToast(`Status updated to ${newStatus}`);
+        loadTickets();
+        loadStats();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Direct S3 Presigned Upload (Checklist Compliance: POST /api/attachments/presigned-url)
+    async function uploadAttachmentToS3() {
+      if (!activeTicketId) return;
+      const input = document.getElementById('fileInput');
+      if (!input.files || input.files.length === 0) {
+        showToast('Please select a file to upload', true);
+        return;
+      }
+
+      const file = input.files[0];
+      try {
+        showToast('Requesting S3 Presigned URL...');
+
+        // Step 1: POST /api/attachments/presigned-url
+        const presignRes = await fetch(`${API_BASE}/attachments/presigned-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticket_id: activeTicketId,
+            filename: file.name,
+            content_type: file.type || 'application/octet-stream'
+          })
+        });
+
+        if (!presignRes.ok) throw new Error('Presigned URL request failed');
+        const { presigned_url } = await presignRes.json();
+
+        // Step 2: Direct browser-to-S3 HTTP PUT Upload
+        showToast('Uploading directly to AWS S3...');
+        const uploadRes = await fetch(presigned_url, {
+          method: 'PUT',
+          body: file
+        });
+
+        if (!uploadRes.ok) {
+          const text = await uploadRes.text();
+          console.error('S3 upload failed:', text);
+          throw new Error(`S3 upload failed: ${uploadRes.status}`);
+        }
+
+        showToast('Attachment uploaded to S3!');
+        input.value = '';
+        openDetailModal(activeTicketId); // Refresh modal timeline
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Add Comment
+    async function handleAddComment(e) {
+      e.preventDefault();
+      if (!activeTicketId) return;
+
+      const author = document.getElementById('commentAuthor').value;
+      const text = document.getElementById('commentText').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/tickets/${activeTicketId}/comments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author, comment_text: text })
+        });
+
+        if (!res.ok) throw new Error('Failed to post comment');
+        document.getElementById('commentText').value = '';
+        showToast('Comment posted');
+        openDetailModal(activeTicketId);
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Render Timeline Components
+    function renderComments(comments) {
+      const container = document.getElementById('commentsTimeline');
+      if (comments.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 italic">No comments posted yet.</p>';
+        return;
+      }
+      container.innerHTML = comments.map(c => `
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3 text-xs">
+          <div class="flex items-center justify-between text-slate-400 mb-1">
+            <strong class="text-slate-200 font-semibold"><i class="fa-solid fa-user-gear text-blue-400 mr-1"></i>${escapeHtml(c.author)}</strong>
+            <span class="text-[11px]">${formatDate(c.created_at)}</span>
+          </div>
+          <p class="text-slate-300 leading-relaxed">${escapeHtml(c.comment_text)}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderAttachments(attachments) {
+      const container = document.getElementById('attachmentsContainer');
+      if (attachments.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-500 italic">No attachments added.</p>';
+        return;
+      }
+      container.innerHTML = attachments.map(a => `
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-300">
+          <div class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-file-arrow-up text-blue-400"></i>
+            <span class="font-medium truncate">${escapeHtml(a.file_name)}</span>
+            <span class="text-[10px] text-slate-500 font-mono">(${a.content_type || 'octet-stream'})</span>
+          </div>
+          <span class="text-[11px] text-slate-400 shrink-0 ml-2">${formatDate(a.created_at)}</span>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+    }
+
+    // Startup Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      checkHealth();
+      loadStats();
+      loadTickets();
+      setInterval(checkHealth, 30000);
+    });
+  </script>
+</body>
+</html>
