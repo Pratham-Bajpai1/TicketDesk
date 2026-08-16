@@ -1,11 +1,9 @@
-# OpenID Connect Provider for GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1", "1c58a2168627f9c908a8b0a7128d96a484382570"]
 }
 
-# IAM Role assumed by GitHub Actions
 resource "aws_iam_role" "github_actions_role" {
   name = "tkt-${var.owner_initials}-github-actions-role"
 
@@ -23,8 +21,12 @@ resource "aws_iam_role" "github_actions_role" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            # Strictly restrict deployment role access to ONLY your repository on the main branch
-            "token.actions.githubusercontent.com:sub" = "repo:Pratham-Bajpai1/Ticketdesk:ref:refs/heads/main"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:Pratham-Bajpai1/TicketDesk:*",
+              "repo:Pratham-Bajpai1/Ticketdesk:*",
+              "repo:Pratham-Bajpai1/TicketDesk:ref:refs/heads/*",
+              "repo:Pratham-Bajpai1/Ticketdesk:ref:refs/heads/*"
+            ]
           }
         }
       }
@@ -32,7 +34,6 @@ resource "aws_iam_role" "github_actions_role" {
   })
 }
 
-# Grant ECR & ECS Deployment Permissions to the Role
 resource "aws_iam_role_policy" "github_actions_policy" {
   name = "tkt-${var.owner_initials}-github-actions-policy"
   role = aws_iam_role.github_actions_role.id
