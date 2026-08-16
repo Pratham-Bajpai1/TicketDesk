@@ -11,22 +11,32 @@ resource "aws_iam_role" "github_actions_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRoleWithWebIdentity"
         Effect = "Allow"
         Principal = {
           Federated = aws_iam_openid_connect_provider.github.arn
         }
+        Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = [
-              "repo:Pratham-Bajpai1/TicketDesk:*",
-              "repo:Pratham-Bajpai1/Ticketdesk:*",
-              "repo:Pratham-Bajpai1/TicketDesk:ref:refs/heads/*",
-              "repo:Pratham-Bajpai1/Ticketdesk:ref:refs/heads/*"
-            ]
+            "token.actions.githubusercontent.com:sub" = "repo:Pratham-Bajpai1/TicketDesk:*"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          }
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:Pratham-Bajpai1/Ticketdesk:*"
           }
         }
       }
